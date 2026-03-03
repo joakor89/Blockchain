@@ -1,0 +1,177 @@
+<!--
+  ~ Copyright (c) Tobias Fertig, 2018.
+  -->
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/paper/bootstrap.min.css" rel="stylesheet"
+          crossorigin="anonymous">
+    <script src="/superagent/superagent.min.js"></script>
+</head>
+<body>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button class="navbar-toggle collapsed" type="button" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar"><span class="sr-only">Toggle navigation</span><span
+                    class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button>
+            <a class="navbar-brand" href="/">Blockchain Explorer Light</a></div>
+        <div class="collapse navbar-collapse" id="navbar">
+            <ul class="nav navbar-nav">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="send.html">Send Transaction</a></li>
+                <!--<li><a href="/accounts">Accounts</a></li>-->
+                <!--<li><a href="/tx/pending">Pending Tx</a></li>-->
+            </ul>
+            <form class="navbar-form navbar-right">
+                <div class="form-group"><input class="form-control" id="search" type="text"
+                                               placeholder="Block / Tx / Account" name="search"></div>
+                <button class="btn btn-default" type="button" onclick="triggerSearch()">Submit</button>
+            </form>
+        </div>
+    </div>
+</nav>
+<div id="content" class="container">
+    <h3>Transfer Tokens</h3>
+<form id="send-transaction-form" class="form-horizontal">
+    <fieldset>
+
+
+        <!-- Text input-->
+        <div class="form-group">
+            <label class="col-md-4 control-label" for="sender">Sender</label>
+            <div class="col-md-4">
+                <input id="sender" name="sender" type="text" placeholder="Sender" class="form-control input-md" required="">
+                <span class="help-block">What's your wallet address?</span>
+            </div>
+        </div>
+
+        <!-- Text input-->
+        <div class="form-group">
+            <label class="col-md-4 control-label" for="receiver">Recipient</label>
+            <div class="col-md-4">
+                <input id="receiver" name="receiver" type="text" placeholder="Recipient"
+                       class="form-control input-md" required="">
+                <span class="help-block">What's the address you want to send the tokens to?</span>
+            </div>
+        </div>
+
+        <!-- Text input-->
+        <div class="form-group">
+            <label class="col-md-4 control-label" for="amount">Amount</label>
+            <div class="col-md-4">
+                <input id="amount" name="amount" type="number" placeholder="Amount" class="form-control input-md"
+                       required="">
+                <span class="help-block">How many tokens do you want to send?</span>
+            </div>
+        </div>
+
+        <!-- Text input-->
+        <div class="form-group">
+            <label class="col-md-4 control-label" for="gasprice">Base Fee</label>
+            <div class="col-md-4">
+                <input id="gasprice" name="transactionFeeBasePrice" type="number"
+                       placeholder="Base Fee"
+                       class="form-control input-md" required="">
+                <span class="help-block">What's the base fee you are willing to pay?</span>
+            </div>
+        </div>
+
+        <!-- Text input-->
+        <div class="form-group">
+            <label class="col-md-4 control-label" for="gaspricelimit">Fee Limit</label>
+            <div class="col-md-4">
+                <input id="gaspricelimit" name="transactionFeeLimit" type="number" placeholder="Fee Limit"
+                       class="form-control input-md" required="">
+                <span class="help-block">What's the maximum fee you want to pay?</span>
+            </div>
+        </div>
+    </fieldset>
+</form>
+
+<div class="form-group">
+    <label class="col-md-4 control-label" for="ok"></label>
+    <div class="col-md-8">
+        <button id="ok" name="ok" class="btn btn-success" type="button" onclick="submit()">Send Transaction</button>
+        <button id="cancel" name="cancel" class="btn btn-danger">Cancel</button>
+    </div>
+
+</div>
+
+<div id="verify" class="form-group">
+    <label class="col-md-4 control-label" for="verify-transaction"></label>
+    <div id="transaction-response" class="col-md-8" style="display:none">
+        <button id="verify-transaction" class="btn btn-info" type="button"
+                onclick="location.href = 'transactions.html?txid=' + txId">Verify Transaction</button>
+    </div>
+</div>
+
+</div>
+<script>
+    function triggerSearch() {
+        var target = 'blockchain/api/' + document.getElementById('search').value;
+
+        superagent.agent().get(target)
+            .then(res => {
+            if(res.body.blockHash)
+        {
+            location.href = 'blocks.html?blockid=' + res.body.blockHash;
+        }
+    else if(res.body.txId)
+        {
+            location.href = 'transactions.html?txid=' + res.body.txId;
+        }
+        else
+        {
+            location.href = 'explorer.html';
+        }
+    })
+    };
+
+    var txId;
+
+    function toJSONString(form) {
+        var obj = {};
+        var elements = form.querySelectorAll("input");
+
+        for (var i = 0; i < elements.length; i++)
+        {
+            var element = elements[i];
+            var name = element.name;
+            var value = element.value;
+
+            if (name) {
+                obj[name] = value;
+            }
+        }
+
+        return JSON.stringify(obj);
+    }
+
+    function submit() {
+        var form = document.getElementById("send-transaction-form");
+        var json = toJSONString(form);
+        var myagent = superagent.agent();
+
+        myagent.post('http://localhost:8080/blockchain/api/transactions')
+            .set('Content-Type', 'application/json')
+            .send(json)
+            .end((err, res) => {
+            console.log(res);
+            console.log(res.header['location']);
+            txId = res.header['location'].slice(res.header['location'].lastIndexOf('/') + 1);
+            document.getElementById('transaction-response').style.display = 'block';
+        });
+    }
+</script>
+<style>
+    #verify {
+        margin-top: 1cm;
+    }
+
+    #content {
+        margin-top: 3cm;
+    }
+</style>
+</body>
+</html>
